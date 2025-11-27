@@ -1,8 +1,33 @@
+# docker-compose.yml (corrigido)
 services:
-  web:
-    build: .
+  summarization_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: summarization_service
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - PORT_MAIN=8000
+    # comando explícito (padrão já está em Dockerfile, mas deixo explicito)
+    command: sh -c "gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
+
+  mcp_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp_api_server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - PORT_MCP=8080
+    depends_on:
+      - summarization_app
+    # comando específico para MCP (executa o app do mcp_server)
+    command: sh -c "gunicorn mcp_server.server:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8080"
